@@ -15,31 +15,29 @@
 #define DEFAULT_BUFLEN 512
 
 
-class Socket
+class Client
 {
 	private:
 		WSADATA wsApiData;
-
-		struct addrinfo* result = nullptr;
-		struct addrinfo* ptr = nullptr;
-		struct addrinfo hints;
-
 		SOCKET mainSocket = INVALID_SOCKET;
+
+		struct addrinfo* result = NULL;
+		struct addrinfo* ptr = NULL;
+		struct addrinfo hints;
 
 		int wsApiRes;
 		int getAddrInfoRes;
 		int connectRes;
+		int sendDataRes;
 		int shutDownRes;
 		int receiveDataRes;
 
 		int receiverBufferLength = DEFAULT_BUFLEN;
 		char receiverBuffer[DEFAULT_BUFLEN];
 
-
-
 	public:
 		bool Initialize();
-		bool ConfigureConnection(char* argv[]);
+		bool Configure(char* argv[]);
 		bool Connect();
 		bool SendReceiveData(const char* senderBuffer);
 		
