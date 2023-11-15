@@ -1,15 +1,16 @@
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 
-#include "Socket.h"
+#include "Client.h"
 
-bool Socket::Initialize()
+bool Client::Initialize()
 {
 	wsApiRes = WSAStartup(MAKEWORD(2, 2), &this->wsApiData);
 
 	if (wsApiRes != 0)
 	{
-		printf("Windows Socket Api Startup Failed: %d\n", wsApiRes);
+		printf("(Client) Failed to initialize Windows Socket API. Error code: %d\n", wsApiRes);
+
 		return false;
 	}
 
@@ -17,12 +18,12 @@ bool Socket::Initialize()
 }
 
 
-bool Socket::ConfigureConnection(char* argv[])
+bool Client::Configure(char* argv[])
 {
 	// initialize memory to zero for the storage of senstive data
 	// Prevent undefined or garbage values that might be seen in the memory
 	ZeroMemory(&hints, sizeof(hints));
-	hints.ai_family = AF_INET;
+	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_protocol = IPPROTO_TCP;
 
@@ -30,7 +31,7 @@ bool Socket::ConfigureConnection(char* argv[])
 
 	if (getAddrInfoRes != 0)
 	{
-		printf("Windows Socket Get Address Failed: %d\n", getAddrInfoRes);
+		printf("(Client) Failed to get address information. Error code: %d\n", getAddrInfoRes);
 		WSACleanup(); // Terminates the usage if Winsock2.
 
 		return false;
@@ -39,7 +40,7 @@ bool Socket::ConfigureConnection(char* argv[])
 	return true;
 }
 
-bool Socket::Connect()
+bool Client::Connect()
 {
 	// Attempt to connect to an address until one succeeds
 	for (ptr = result; ptr != NULL; ptr = ptr->ai_next) {
@@ -49,7 +50,7 @@ bool Socket::Connect()
 
 		if (mainSocket == INVALID_SOCKET) 
 		{
-			printf("Socket Connection Failed with Error: %ld\n", WSAGetLastError());
+			printf("(Client) Failed to create socket. Error code: %ld\n", WSAGetLastError());
 			WSACleanup();
 
 			return false;
@@ -73,7 +74,7 @@ bool Socket::Connect()
 
 	if (mainSocket == INVALID_SOCKET)
 	{
-		printf("Unable to Connect to Server!\n");
+		printf("(Client) Unable to connect to the server.\n");
 		WSACleanup();
 
 		return false;
@@ -83,21 +84,21 @@ bool Socket::Connect()
 }
 
 
-bool Socket::SendReceiveData(const char* senderBuffer)
+bool Client::SendReceiveData(const char* senderBuffer)
 {
 	//const char* senderBuffer = "Hello, test client";
-	int sendMessageRes = send(mainSocket, senderBuffer, (int)strlen(senderBuffer), 0); // Send an initial buffer
+	sendDataRes = send(mainSocket, senderBuffer, (int)strlen(senderBuffer), 0); // Send an initial buffer
 
-	if (sendMessageRes == SOCKET_ERROR)
+	if (sendDataRes == SOCKET_ERROR)
 	{
-		printf("Sending Message Failed %d\n", WSAGetLastError());
+		printf("(Client) Failed to send data. Error code: %d\n", WSAGetLastError());
 		closesocket(mainSocket);  // Completely terminates communication.
 		WSACleanup(); // Terminates the usage of Winsock2.
 
 		return false;
 	}
 
-	printf("Bytes Sent: %ld\n", sendMessageRes);
+	printf("(Client) Bytes sent: %ld\n", sendDataRes);
 
 
 	// shutdown the connection for sending since no more data will be sent
@@ -106,7 +107,7 @@ bool Socket::SendReceiveData(const char* senderBuffer)
 
 	if (shutDownRes == SOCKET_ERROR)
 	{
-		printf("ShutDown Failed: %d\n", WSAGetLastError());
+		printf("(Client) Failed to shut down connection. Error code: %d\n", WSAGetLastError());
 		closesocket(mainSocket); // Completely terminates communication.
 		WSACleanup(); // Terminates the usage of Winsock2.
 
@@ -119,16 +120,17 @@ bool Socket::SendReceiveData(const char* senderBuffer)
 
 		if (receiveDataRes > 0)
 		{
-			printf("Bytes Received: %d\n", receiveDataRes);
+			printf("(Client) Bytes received: %d\n", receiveDataRes);
 		}
 		else if (receiveDataRes == 0)
 		{
-			printf("Connection Closed!\n");
+			printf("(Client) Connection closed!\n");
 		}
 		else
 		{
-			printf("Receive Failed: %d\n", WSAGetLastError());
+			printf("(Client) Receive failed. Error code: %d\n", WSAGetLastError());
 		}
+
 	} while (receiveDataRes > 0);
 
 	closesocket(mainSocket); // Completely terminates communication.
