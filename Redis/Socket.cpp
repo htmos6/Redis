@@ -17,43 +17,20 @@ bool Socket::Initialize()
 }
 
 
-void Socket::ConfigureConnection()
+bool Socket::ConfigureConnection(char* argv[])
 {
 	// initialize memory to zero for the storage of senstive data
 	// Prevent undefined or garbage values that might be seen in the memory
-	ZeroMemory(&this->hints, sizeof(this->hints));
-	this->hints.ai_family = AF_INET;
-	this->hints.ai_socktype = SOCK_STREAM;
-	this->hints.ai_protocol = IPPROTO_TCP;
-}
+	ZeroMemory(&hints, sizeof(hints));
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_protocol = IPPROTO_TCP;
 
-
-bool Socket::SetupAddress(char* argv[])
-{
-	getAddrInfoRes = getaddrinfo(argv[1], DEFAULT_PORT, &this->hints, &this->result);
+	getAddrInfoRes = getaddrinfo(argv[1], DEFAULT_PORT, &hints, &result);
 
 	if (getAddrInfoRes != 0)
 	{
 		printf("Windows Socket Get Address Failed: %d\n", getAddrInfoRes);
-		freeaddrinfo(result); // Frees address that getaddrinfo dynamically allocates.
-		WSACleanup(); // Terminates the usage if Winsock2.
-		
-		return false;
-	}
-
-	return true;
-}
-
-
-bool Socket::ConfigureSocket()
-{
-	ptr = result;
-	mainSocket = socket(this->ptr->ai_family, this->ptr->ai_socktype, this->ptr->ai_protocol);
-
-	if (mainSocket == INVALID_SOCKET)
-	{
-		printf("Windows Socket Connection could not Established. (Error Code: %ld)", WSAGetLastError());
-		freeaddrinfo(result); // Frees address that getaddrinfo dynamically allocates. Since we use 'result' that has dynamically allocated memory, call 'freeaddrinfo'.
 		WSACleanup(); // Terminates the usage if Winsock2.
 
 		return false;
@@ -61,35 +38,43 @@ bool Socket::ConfigureSocket()
 
 	return true;
 }
-
 
 bool Socket::Connect()
 {
-	connectRes = connect(mainSocket, this->ptr->ai_addr, (int)this->ptr->ai_addrlen);
+	// Attempt to connect to an address until one succeeds
+	for (ptr = result; ptr != NULL; ptr = ptr->ai_next) {
 
-	if (connectRes == SOCKET_ERROR)
-	{
-		closesocket(mainSocket);
-		mainSocket = INVALID_SOCKET;
+		// Create a SOCKET for connecting to server
+		mainSocket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
 
-		/*
-		// Try next address returned by getaddrinfo
-		struct addrinfo* nextPtr = this->ptr->ai_next;
-		connectRes = connect(mainSocket, nextPtr->ai_addr, (int)nextPtr->ai_addrlen);
+		if (mainSocket == INVALID_SOCKET) 
+		{
+			printf("Socket Connection Failed with Error: %ld\n", WSAGetLastError());
+			WSACleanup();
 
-		if (connectRes == SOCKET_ERROR)
+			return false;
+		}
+
+		// Connect to server.
+		connectRes = connect(mainSocket, ptr->ai_addr, (int)ptr->ai_addrlen);
+
+		if (connectRes == SOCKET_ERROR) 
 		{
 			closesocket(mainSocket);
 			mainSocket = INVALID_SOCKET;
+
+			continue;
 		}
-		*/
+
+		break;
 	}
+
+	freeaddrinfo(result);
 
 	if (mainSocket == INVALID_SOCKET)
 	{
 		printf("Unable to Connect to Server!\n");
-		freeaddrinfo(result); // Frees address that getaddrinfo dynamically allocates.
-		WSACleanup(); // Terminates the usage of Winsock2.
+		WSACleanup();
 
 		return false;
 	}
@@ -98,9 +83,9 @@ bool Socket::Connect()
 }
 
 
-bool Socket::SendReceiveData()
+bool Socket::SendReceiveData(const char* senderBuffer)
 {
-	const char* senderBuffer = "Hello, test client";
+	//const char* senderBuffer = "Hello, test client";
 	int sendMessageRes = send(mainSocket, senderBuffer, (int)strlen(senderBuffer), 0); // Send an initial buffer
 
 	if (sendMessageRes == SOCKET_ERROR)
