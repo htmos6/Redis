@@ -7,8 +7,9 @@
 #include <stdio.h>
 #include <iostream>
 
-#pragma comment(lib, "Ws2_32.lib")
-
+#pragma comment (lib, "Ws2_32.lib")
+#pragma comment (lib, "Mswsock.lib")
+#pragma comment (lib, "AdvApi32.lib")
 
 #define DEFAULT_PORT "27015"
 #define DEFAULT_BUFLEN 512
@@ -38,11 +39,8 @@ class Socket
 
 	public:
 		bool Initialize();
-		void ConfigureConnection();
-		bool SetupAddress(char* argv[]);
-		bool ConfigureSocket();
+		bool ConfigureConnection(char* argv[]);
 		bool Connect();
-		bool SendReceiveData();
-
-
+		bool SendReceiveData(const char* senderBuffer);
+		
 };

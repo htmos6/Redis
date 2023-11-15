@@ -13,11 +13,9 @@ int main(int argc, char* argv[]) {
 
 	Socket sc1;
 	sc1.Initialize();
-	sc1.ConfigureConnection();
-	sc1.SetupAddress(argv);
-	sc1.ConfigureSocket();
+	sc1.ConfigureConnection(argv);
 	sc1.Connect();
-	sc1.SendReceiveData();
+	sc1.SendReceiveData("Hello, test client!");
 
 	return 0;
 }
